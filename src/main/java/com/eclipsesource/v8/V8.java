@@ -18,7 +18,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.eclipsesource.v8.utils.V8Executor;
+import com.eclipsesource.v8.utils.V8Function;
 import com.eclipsesource.v8.utils.V8Map;
+import com.eclipsesource.v8.utils.V8Runnable;
+import com.eclipsesource.v8.utils.V8Supplier;
 
 /**
  * An isolated V8Runtime. All JavaScript execution must exist
@@ -35,10 +38,10 @@ import com.eclipsesource.v8.utils.V8Map;
  */
 public class V8 extends V8Object {
 
-    private static Object       lock           = new Object();
-    private volatile static int runtimeCounter = 0;
-    private static String       v8Flags        = null;
-    private static boolean      initialized    = false;
+    private static Object                  lock                    = new Object();
+    private volatile static int            runtimeCounter          = 0;
+    private static String                  v8Flags                 = null;
+    private static boolean                 initialized             = false;
 
     private final V8Locker                 locker;
     private int                            methodReferenceCounter  = 0;
@@ -49,11 +52,11 @@ public class V8 extends V8Object {
     private boolean                        forceTerminateExecutors = false;
     private Map<Integer, MethodDescriptor> functions               = new HashMap<Integer, MethodDescriptor>();
 
-    private static boolean   nativeLibraryLoaded = false;
-    private static Error     nativeLoadError     = null;
-    private static Exception nativeLoadException = null;
-    private static V8Value   undefined           = new V8Object.Undefined();
-    private static Object    invalid             = new Object();
+    private static boolean                 nativeLibraryLoaded     = false;
+    private static Error                   nativeLoadError         = null;
+    private static Exception               nativeLoadException     = null;
+    private static V8Value                 undefined               = new V8Object.Undefined();
+    private static Object                  invalid                 = new Object();
 
     private class MethodDescriptor {
         Object           object;
@@ -608,6 +611,51 @@ public class V8 extends V8Object {
      */
     public long getBuildID() {
         return _getBuildID();
+    }
+
+    /**
+     * Run the supplier while having the lock for the runtime acquired
+     *
+     * @param supplier the supplier
+     * @return the return value
+     */
+    public <T> T runInLock(final V8Supplier<T> supplier) {
+        try {
+            getLocker().acquire();
+            return supplier.get(this);
+        } finally {
+            getLocker().release();
+        }
+    }
+
+    /**
+     * Run the function while having the lock for the runtime acquired
+     *
+     * @param value the value to be passed to the function
+     * @param function the function to apply on the value
+     * @return the return of the function
+     */
+    public <T, R> R runInLock(final T value, final V8Function<T, R> function) {
+        try {
+            getLocker().acquire();
+            return function.apply(this, value);
+        } finally {
+            getLocker().release();
+        }
+    }
+
+    /**
+     * Run the runnable while having the lock for the runtime acquired
+     *
+     * @param r the runnable to run
+     */
+    public void runInLock(final V8Runnable r) {
+        try {
+            getLocker().acquire();
+            r.run(this);
+        } finally {
+            getLocker().release();
+        }
     }
 
     void checkThread() {

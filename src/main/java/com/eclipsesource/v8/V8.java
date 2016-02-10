@@ -18,10 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.eclipsesource.v8.utils.V8Executor;
-import com.eclipsesource.v8.utils.V8Function;
 import com.eclipsesource.v8.utils.V8Map;
-import com.eclipsesource.v8.utils.V8Runnable;
-import com.eclipsesource.v8.utils.V8Supplier;
 
 /**
  * An isolated V8Runtime. All JavaScript execution must exist
@@ -611,51 +608,6 @@ public class V8 extends V8Object {
      */
     public long getBuildID() {
         return _getBuildID();
-    }
-
-    /**
-     * Run the supplier while having the lock for the runtime acquired
-     *
-     * @param supplier the supplier
-     * @return the return value
-     */
-    public <T> T runInLock(final V8Supplier<T> supplier) {
-        try {
-            getLocker().acquire();
-            return supplier.get(this);
-        } finally {
-            getLocker().release();
-        }
-    }
-
-    /**
-     * Run the function while having the lock for the runtime acquired
-     *
-     * @param value the value to be passed to the function
-     * @param function the function to apply on the value
-     * @return the return of the function
-     */
-    public <T, R> R runInLock(final T value, final V8Function<T, R> function) {
-        try {
-            getLocker().acquire();
-            return function.apply(this, value);
-        } finally {
-            getLocker().release();
-        }
-    }
-
-    /**
-     * Run the runnable while having the lock for the runtime acquired
-     *
-     * @param r the runnable to run
-     */
-    public void runInLock(final V8Runnable r) {
-        try {
-            getLocker().acquire();
-            r.run(this);
-        } finally {
-            getLocker().release();
-        }
     }
 
     void checkThread() {
